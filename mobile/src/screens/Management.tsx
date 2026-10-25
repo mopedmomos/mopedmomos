@@ -90,6 +90,43 @@ export function Overview({snapshot:s,repo,onSelect,onHistory}:{snapshot:Snapshot
   const insights = useMemo(()=>calculateInsights(filteredOrders),[filteredOrders]);
   const stats = insights.stats;
 
+  const displayStats = useMemo(()=>{
+    if(typeFilter === 'dine-in'){
+      return {
+        net: insights.dineInNetPaise,
+        orders: insights.dineInCount,
+        plates: insights.dineInPlates,
+        aov: insights.dineInCount ? Math.round(insights.dineInNetPaise / insights.dineInCount) : 0,
+        collected: insights.dineInCollectedPaise,
+        unpaid: insights.dineInUnpaidPaise,
+        cash: insights.dineInCashPaise,
+        upi: insights.dineInUpiPaise
+      };
+    }
+    if(typeFilter === 'takeaway'){
+      return {
+        net: insights.takeawayNetPaise,
+        orders: insights.takeawayCount,
+        plates: insights.takeawayPlates,
+        aov: insights.takeawayCount ? Math.round(insights.takeawayNetPaise / insights.takeawayCount) : 0,
+        collected: insights.takeawayCollectedPaise,
+        unpaid: insights.takeawayUnpaidPaise,
+        cash: insights.takeawayCashPaise,
+        upi: insights.takeawayUpiPaise
+      };
+    }
+    return {
+      net: stats.net,
+      orders: stats.orders,
+      plates: stats.plates,
+      aov: insights.aovPaise,
+      collected: stats.collected,
+      unpaid: stats.unpaid,
+      cash: insights.cashPaise,
+      upi: insights.upiPaise
+    };
+  },[typeFilter, insights, stats]);
+
   const activeLabel = useMemo(()=>{
     if(selectedDay) return `DAY: ${selectedDay}`;
     switch(timeframe){
@@ -174,44 +211,44 @@ export function Overview({snapshot:s,repo,onSelect,onHistory}:{snapshot:Snapshot
       <View style={m.metrics}>
         <View style={m.metric}>
           <Icon name="rupee" size={20} color={colors.green}/>
-          <Text style={m.metricValue}>{money(stats.net)}</Text>
-          <Text style={u.tiny}>Net Revenue</Text>
+          <Text style={m.metricValue}>{money(displayStats.net)}</Text>
+          <Text style={u.tiny}>{typeFilter==='dine-in'?'Dine-in Revenue':typeFilter==='takeaway'?'Parcel Revenue':'Net Revenue'}</Text>
         </View>
         <View style={m.metric}>
           <Icon name="file-text" size={20} color={colors.yellow}/>
-          <Text style={m.metricValue}>{String(stats.orders)}</Text>
-          <Text style={u.tiny}>Total Orders</Text>
+          <Text style={m.metricValue}>{String(displayStats.orders)}</Text>
+          <Text style={u.tiny}>{typeFilter==='dine-in'?'Dine-in Orders':typeFilter==='takeaway'?'Parcel Orders':'Total Orders'}</Text>
         </View>
         <View style={m.metric}>
           <Icon name="utensils" size={20} color="#6389F1"/>
-          <Text style={m.metricValue}>{String(stats.plates)}</Text>
-          <Text style={u.tiny}>Plates Sold</Text>
+          <Text style={m.metricValue}>{String(displayStats.plates)}</Text>
+          <Text style={u.tiny}>{typeFilter==='dine-in'?'Dine-in Plates':typeFilter==='takeaway'?'Parcel Plates':'Plates Sold'}</Text>
         </View>
         <View style={m.metric}>
           <Icon name="coffee" size={20} color="#C488F2"/>
-          <Text style={m.metricValue}>{money(insights.aovPaise)}</Text>
+          <Text style={m.metricValue}>{money(displayStats.aov)}</Text>
           <Text style={u.tiny}>Average Order Value</Text>
         </View>
       </View>
 
       {/* Payment Settlement & Distribution Card */}
       <View style={u.card}>
-        <Text style={u.eyebrow}>PAYMENTS & COLLECTIONS</Text>
+        <Text style={u.eyebrow}>{typeFilter==='dine-in'?'DINE-IN PAYMENTS':typeFilter==='takeaway'?'PARCEL PAYMENTS':'PAYMENTS & COLLECTIONS'}</Text>
         <View style={u.between}>
           <Text style={u.body}>Collected revenue</Text>
-          <Text style={[u.label,{color:colors.green}]}>{money(stats.collected)}</Text>
+          <Text style={[u.label,{color:colors.green}]}>{money(displayStats.collected)}</Text>
         </View>
         <View style={u.between}>
           <Text style={u.body}>Pending / Unpaid due</Text>
-          <Text style={[u.label,{color:stats.unpaid>0?colors.orange:colors.green}]}>{money(stats.unpaid)}</Text>
+          <Text style={[u.label,{color:displayStats.unpaid>0?colors.orange:colors.green}]}>{money(displayStats.unpaid)}</Text>
         </View>
         <View style={u.between}>
           <Text style={u.body}>Cash collections</Text>
-          <Text style={u.label}>{money(insights.cashPaise)}</Text>
+          <Text style={u.label}>{money(displayStats.cash)}</Text>
         </View>
         <View style={u.between}>
           <Text style={u.body}>UPI / Online collections</Text>
-          <Text style={u.label}>{money(insights.upiPaise)}</Text>
+          <Text style={u.label}>{money(displayStats.upi)}</Text>
         </View>
         <View style={u.between}>
           <Text style={u.body}>Completed tickets</Text>

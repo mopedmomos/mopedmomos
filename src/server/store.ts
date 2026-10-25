@@ -18,8 +18,8 @@ export async function readOrders(cx:Executor,where='1=1',args:(string|number)[]=
  const all=(await query(cx,`SELECT * FROM order_items WHERE order_id IN (${rows.map(()=>'?').join(',')})`,rows.map(r=>String(r.id)))).rows;
  return rows.map(r=>({id:String(r.id),businessDate:String(r.business_date),sequence:Number(r.sequence),status:String(r.status) as Status,type:String(r.order_type) as Order['type'],note:String(r.note),subtotal:Number(r.subtotal),adjustment:Number(r.adjustment),total:Number(r.total),collected:Number(r.collected),method:r.payment_method as Order['method'],createdAt:Number(r.created_at),updatedAt:Number(r.updated_at),version:Number(r.version),items:all.filter(i=>i.order_id===r.id).map(mapItem)}));
 }
-export async function snapshot() {return write(async tx=>{const config=await settings(tx);const today=businessDate(new Date(),config.timezone);const [items,orders,link]=await Promise.all([menu(tx),readOrders(tx,"business_date=? OR status IN ('pending','preparing','ready')",[today]),query(tx,'SELECT id FROM display_links WHERE revoked_at IS NULL LIMIT 1')]);return {menu:items,orders,settings:config,businessDate:today,stats:calculateStats(orders.filter(o=>o.businessDate===today)),realtimeConfigured:!!process.env.ABLY_API_KEY,displayConfigured:!!link.rows.length};});}
-export async function kitchenSnapshot() {return write(async tx=>{const all=await readOrders(tx,"status IN ('pending','preparing','ready')");const config=await settings(tx);return {menu:(await menu(tx)).map(({id,name,variant,portion,category,sort,available})=>({id,name,variant,portion,category,sort,available})),orders:kitchenProjection(all).sort((a,b)=>a.createdAt-b.createdAt),name:config.name,timezone:config.timezone,serverTime:Date.now(),realtimeConfigured:!!process.env.ABLY_API_KEY};});}
+export async function snapshot() {return write(async tx=>{const config=await settings(tx);const today=businessDate(new Date(),config.timezone);const [items,orders,link]=await Promise.all([menu(tx),readOrders(tx,"business_date=? OR status IN ('pending','preparing','ready')",[today]),query(tx,'SELECT id FROM display_links WHERE revoked_at IS NULL LIMIT 1')]);return {menu:items,orders,settings:config,businessDate:today,stats:calculateStats(orders.filter(o=>o.businessDate===today)),realtimeConfigured:false,displayConfigured:!!link.rows.length};});}
+export async function kitchenSnapshot() {return write(async tx=>{const all=await readOrders(tx,"status IN ('pending','preparing','ready')");const config=await settings(tx);return {menu:(await menu(tx)).map(({id,name,variant,portion,category,sort,available})=>({id,name,variant,portion,category,sort,available})),orders:kitchenProjection(all).sort((a,b)=>a.createdAt-b.createdAt),name:config.name,timezone:config.timezone,serverTime:Date.now(),realtimeConfigured:false};});}
 async function record(tx:Transaction,orderId:string,version:number,kind:string,detail:unknown) {
  const id=randomUUID(),now=Date.now();await query(tx,'INSERT INTO order_events(id,order_id,kind,version,created_at,detail) VALUES (?,?,?,?,?,?)',[id,orderId,kind,version,now,JSON.stringify(detail)]);await query(tx,'INSERT INTO outbox(id,order_id,version,created_at) VALUES (?,?,?,?)',[id,orderId,version,now]);
 }
@@ -65,5 +65,5 @@ export async function clearOrders() {
   });
   return { cleared: true };
 }
-export async function healthy() {await query(db(),'SELECT 1');return {database:true,realtime:!!process.env.ABLY_API_KEY};}
+export async function healthy() {await query(db(),'SELECT 1');return {database:true,realtime:false};}
 export {isActive};

@@ -66,4 +66,5 @@ export async function clearOrders() {
   return { cleared: true };
 }
 export async function healthy() {await query(db(),'SELECT 1');return {database:true,realtime:false};}
+export async function latestTimestamp() {const r=await query(db(),'SELECT MAX(updated_at) AS latest FROM orders');return Number(r.rows[0]?.latest??0);}
 export {isActive};

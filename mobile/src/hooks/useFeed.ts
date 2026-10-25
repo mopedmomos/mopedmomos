@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {AppState} from 'react-native';
+import {AppState,type AppStateStatus} from 'react-native';
 import {ApiError,type Repository,type KitchenSnapshot} from '../lib/repository';
 import type {Snapshot} from '../lib/domain';
 
@@ -12,8 +12,9 @@ export function useFeed(repo:Repository,kitchenToken?:string){
   const running=useRef<Promise<void>|null>(null);
   const dirty=useRef(false);
   const alive=useRef(true);
+  const lastKnownTimestamp=useRef<number>(0);
 
-  const refresh=useCallback(async()=>{
+  const fetchFull=useCallback(async()=>{
     if(running.current){dirty.current=true;return running.current;}
     const run=async()=>{
       do{
@@ -25,6 +26,9 @@ export function useFeed(repo:Repository,kitchenToken?:string){
             else setSnapshot(result as Snapshot);
             setError('');
             setLastSync(Date.now());
+            const orders=(result as {orders?:Array<{updatedAt?:number}>}).orders??[];
+            const latest=orders.reduce((max,o)=>Math.max(max,o.updatedAt??0),0);
+            if(latest>0)lastKnownTimestamp.current=latest;
           }
         }catch(e){
           if(alive.current){
@@ -41,24 +45,63 @@ export function useFeed(repo:Repository,kitchenToken?:string){
     try{await running.current;}finally{running.current=null;}
   },[repo,kitchenToken]);
 
+  const poll=useCallback(async()=>{
+    if(AppState.currentState!=='active'||!alive.current)return;
+    try{
+      const {latest}=await repo.check(kitchenToken);
+      if(latest>lastKnownTimestamp.current||!lastKnownTimestamp.current){
+        await fetchFull();
+      }else if(alive.current){
+        setLastSync(Date.now());
+        setError('');
+      }
+    }catch{
+      void fetchFull();
+    }
+  },[repo,kitchenToken,fetchFull]);
+
   useEffect(()=>{
     alive.current=true;
-    void refresh();
-    // Fast automatic sync every 2.5 seconds when the app is active
-    const timer=setInterval(()=>{
-      if(AppState.currentState==='active')void refresh();
-    },2500);
-    const app=AppState.addEventListener('change',state=>{
-      if(state==='active')void refresh();
+    let timer:ReturnType<typeof setInterval>|null=null;
+
+    const startTimer=()=>{
+      if(timer)clearInterval(timer);
+      timer=setInterval(()=>{
+        if(AppState.currentState==='active')void poll();
+      },8000);
+    };
+
+    const stopTimer=()=>{
+      if(timer){
+        clearInterval(timer);
+        timer=null;
+      }
+    };
+
+    if(AppState.currentState==='active'){
+      void fetchFull();
+      startTimer();
+    }
+
+    const app=AppState.addEventListener('change',(state:AppStateStatus)=>{
+      if(state==='active'){
+        void fetchFull();
+        startTimer();
+      }else{
+        // Stop timer when backgrounded or locked: zero calls, zero DB reads
+        stopTimer();
+      }
     });
-    const unsubscribe=repo.subscribe(()=>void refresh());
+
+    const unsubscribe=repo.subscribe(()=>void fetchFull());
+
     return()=>{
       alive.current=false;
-      clearInterval(timer);
+      stopTimer();
       app.remove();
       unsubscribe();
     };
-  },[repo,kitchenToken,refresh]);
+  },[repo,kitchenToken,fetchFull,poll]);
 
   return {
     snapshot,
@@ -67,6 +110,6 @@ export function useFeed(repo:Repository,kitchenToken?:string){
     lastSync,
     revoked,
     health:error?'Reconnecting':'Auto-sync',
-    refresh
+    refresh:fetchFull
   };
 }

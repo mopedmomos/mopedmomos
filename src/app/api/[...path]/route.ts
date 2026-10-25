@@ -37,6 +37,7 @@ async function dispatch(req:Request,context:{params:Promise<{path:string[]}>}) {
    if(method!=='GET')throw new AppError(405,'Kitchen displays are read-only.');
    const token=req.headers.get('x-kitchen-token')??'';const link=await validateDisplay(token);
    if(path==='kitchen/snapshot')return json(await store.kitchenSnapshot());
+   if(path==='kitchen/check')return json({latest:await store.latestTimestamp()});
    if(path==='kitchen/token')return json({tokenRequest:await tokenRequest(link.channel),channel:link.channel});
    throw new AppError(404,'Endpoint not found.');
   }
@@ -47,6 +48,7 @@ async function dispatch(req:Request,context:{params:Promise<{path:string[]}>}) {
   if(path==='admin/drive/disconnect'&&method==='POST'){await revokeDrive(String(administrator.id));return json({disconnected:true});}
   if(path==='admin/drive/upload'&&method==='POST'){const input=z.object({image:z.string().max(350000),name:z.string().max(80)}).parse(await body(req,400000));return json(await uploadDrivePhoto(String(administrator.id),input.image,input.name));}
   if(path==='admin/snapshot'&&method==='GET') {after(()=>flushOutbox().then(()=>{}).catch(()=>{}));return json(await store.snapshot());}
+  if(path==='admin/check'&&method==='GET')return json({latest:await store.latestTimestamp()});
   if(path==='admin/token'&&method==='GET')return json({tokenRequest:await tokenRequest(),channel:getAdminChannel()});
   if(path==='admin/health'&&method==='GET')return json(await store.healthy());
    if(path==='admin/reset-data'&&method==='POST')return json(await store.clearOrders());

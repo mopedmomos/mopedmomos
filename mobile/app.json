@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Moped Momos",
+    "slug": "moped-momos-counter",
+    "version": "2.0.0",
+    "scheme": "mopedmomos",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#17221b"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "in.mopedmomos.counter"
+    },
+    "android": {
+      "package": "in.mopedmomos.counter",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#17221b"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": true,
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/icon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": false
+        }
+      ]
+    ],
+    "extra": {
+      "description": "Private stall counter and read-only kitchen"
+    }
+  }
+}

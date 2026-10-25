@@ -1,0 +1,147 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "orders-apk": {
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "orders",
+        "EXPO_PUBLIC_APP_VARIANT": "orders"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "orders-production": {
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "orders",
+        "EXPO_PUBLIC_APP_VARIANT": "orders"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
+    "kitchen-apk": {
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "kitchen",
+        "EXPO_PUBLIC_APP_VARIANT": "kitchen"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "kitchen-production": {
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "kitchen",
+        "EXPO_PUBLIC_APP_VARIANT": "kitchen"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
+    "preview": {
+      "extends": "orders-apk"
+    },
+    "production": {
+      "extends": "orders-production"
+    },
+    "orders-ios": {
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "orders",
+        "EXPO_PUBLIC_APP_VARIANT": "orders"
+      },
+      "ios": {
+        "simulator": false
+      }
+    },
+    "orders-ios-store": {
+      "distribution": "store",
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "orders",
+        "EXPO_PUBLIC_APP_VARIANT": "orders"
+      },
+      "ios": {
+        "simulator": false
+      }
+    },
+    "orders-ios-simulator": {
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "orders",
+        "EXPO_PUBLIC_APP_VARIANT": "orders"
+      },
+      "ios": {
+        "simulator": true
+      }
+    },
+    "kitchen-ios": {
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "kitchen",
+        "EXPO_PUBLIC_APP_VARIANT": "kitchen"
+      },
+      "ios": {
+        "simulator": false
+      }
+    },
+    "kitchen-ios-store": {
+      "distribution": "store",
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "kitchen",
+        "EXPO_PUBLIC_APP_VARIANT": "kitchen"
+      },
+      "ios": {
+        "simulator": false
+      }
+    },
+    "kitchen-ios-simulator": {
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "kitchen",
+        "EXPO_PUBLIC_APP_VARIANT": "kitchen"
+      },
+      "ios": {
+        "simulator": true
+      }
+    },
+    "wrapper-ios": {
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "wrapper",
+        "EXPO_PUBLIC_APP_VARIANT": "wrapper"
+      },
+      "ios": {
+        "simulator": false
+      }
+    },
+    "wrapper-ios-store": {
+      "distribution": "store",
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "wrapper",
+        "EXPO_PUBLIC_APP_VARIANT": "wrapper"
+      },
+      "ios": {
+        "simulator": false
+      }
+    },
+    "wrapper-ios-simulator": {
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "wrapper",
+        "EXPO_PUBLIC_APP_VARIANT": "wrapper"
+      },
+      "ios": {
+        "simulator": true
+      }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+import type {ImageSourcePropType} from 'react-native';
+export const menuPhotos:Record<string,ImageSourcePropType>={
+ steam:require('../../assets/menu/steam.webp'),fried:require('../../assets/menu/fried.webp'),peri:require('../../assets/menu/peri.webp'),kurkure:require('../../assets/menu/kurkure.webp'),'kurkure-peri':require('../../assets/menu/kurkure-peri.webp'),twister:require('../../assets/menu/twister.webp'),fries:require('../../assets/menu/fries.webp'),'twister-peri':require('../../assets/menu/twister-peri.webp'),'fries-peri':require('../../assets/menu/fries-peri.webp'),blue:require('../../assets/menu/blue.webp'),lime:require('../../assets/menu/lime.webp'),vanilla:require('../../assets/menu/vanilla.webp'),special:require('../../assets/menu/special.webp')};
+export function menuPhoto(image:string):ImageSourcePropType{return image.startsWith('data:image/')?{uri:image}:menuPhotos[image]??menuPhotos.steam;}
+export const paymentQR:ImageSourcePropType=require('../../assets/upi-payment.png');

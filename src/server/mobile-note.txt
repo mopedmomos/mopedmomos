@@ -1,0 +1,1 @@
+Native clients use the same domain services via kind-restricted bearer sessions. See migration 004 and mobile/README.md. Cookie sessions remain separate and retain same-origin CSRF checks.

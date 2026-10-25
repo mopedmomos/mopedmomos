@@ -1,0 +1,7 @@
+'use client';
+import {useState} from 'react';
+import {Brand} from '@/components/ui';
+import {api} from '@/lib/client';
+export default function Login(){const [busy,setBusy]=useState(false),[error,setError]=useState('');async function login(){setBusy(true);setError('');try{const bytes=crypto.getRandomValues(new Uint8Array(32)),verifier=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');const hashed=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier));const challenge=btoa(String.fromCharCode(...new Uint8Array(hashed))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');const flow=await api<{authorizationUrl:string;state:string}>('auth/google/start','POST',{kind:'browser',purpose:'login',challenge,returnUri:window.location.origin+'/auth/complete'});sessionStorage.setItem('moped-google-login',JSON.stringify({verifier,state:flow.state,createdAt:Date.now()}));window.location.assign(flow.authorizationUrl);}catch(e){setError(e instanceof Error?e.message:'Google sign-in failed.');setBusy(false);}}
+ return <main className="google-login"><section><Brand/><span className="eyebrow">ORDERS · OWNER ACCESS</span><h1>Your counter,<br/>securely connected.</h1><p>Only the configured owner Google account can sign in. Kitchen staff use a private viewing link without a login.</p>{error&&<p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy} onClick={()=>void login()}>{busy?'Opening Google…':'Continue with Google'}</button><small>No password login or sample access.</small></section></main>;
+}

@@ -1,0 +1,23 @@
+import {signInGoogle,type GoogleResult} from './googleAuth';
+import {businessDate,calculateStats,canTransition,defaultSettings,kitchenProjection,kitchenMenu,type Snapshot,type KitchenOrder,type Draft,type Order,type MenuOption,type Settings,type AuditEvent,type Status} from './domain';
+export type KitchenSnapshot={menu?:import('./domain').KitchenMenuItem[];orders:KitchenOrder[];name:string;timezone:string;realtimeConfigured:boolean};
+export type Change={version:number;status?:Status;payment?:{collected:number;method:Order['method']};edit?:Draft};
+export interface Repository {
+ readonly origin:string;
+ googleLogin():Promise<GoogleResult|null>;connectDrive():Promise<void>;account():Promise<{email:string;driveConnected:boolean}>;disconnectDrive():Promise<void>;uploadPhoto(image:string,name:string):Promise<{image:string;driveFileId:string}>;deleteAccount(confirmation:string):Promise<void>;snapshot():Promise<Snapshot>;kitchen(token:string):Promise<KitchenSnapshot>;create(draft:Draft):Promise<Order>;update(id:string,change:Change):Promise<Order>;saveMenu(o:MenuOption):Promise<void>;saveSettings(s:Settings):Promise<void>;history(from?:string,to?:string):Promise<Order[]>;events(id:string):Promise<AuditEvent[]>;rotate():Promise<{path:string;token:string;qrDataUrl?:string}>;realtime(token?:string):Promise<{tokenRequest:import('ably').TokenRequest;channel:string}>;logout():Promise<void>;subscribe(listener:()=>void):()=>void;
+}
+export class ApiError extends Error{constructor(message:string,public status:number){super(message);}}
+export function normalizeOrigin(value:string,development=false){const url=new URL(value.trim());if(url.username||url.password||url.search||url.hash||!['','/'].includes(url.pathname))throw new Error('Enter only the backend origin, such as https://your-app.vercel.app.');if(url.protocol!=='https:'&&!(development&&url.protocol==='http:'))throw new Error('Use an HTTPS backend for secure sign-in.');return url.origin;}
+export class LiveRepository implements Repository {
+ constructor(readonly origin:string,private token:string|null,private expired:()=>void){}
+ private async request<T>(path:string,method='GET',body?:unknown,kitchenToken?:string):Promise<T>{const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),path==='admin/drive/upload'?40000:15000);try{const response=await fetch(this.origin+'/api/'+path,{method,credentials:'omit',headers:{...(body?{'Content-Type':'application/json'}:{}),...(!kitchenToken&&this.token?{Authorization:'Bearer '+this.token}:{}),...(kitchenToken?{'X-Kitchen-Token':kitchenToken}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:controller.signal});const result=await response.json();if(!response.ok){if(response.status===401&&!kitchenToken)this.expired();throw new ApiError(result.error??'Request failed. Try again.',response.status);}return result.data;}catch(e){if(e instanceof Error&&e.name==='AbortError')throw new Error('The connection timed out. Your draft is kept; retry the same ticket safely.');throw e;}finally{clearTimeout(timer);}}
+ async googleLogin(){return signInGoogle(this.origin);}
+ async connectDrive(){await signInGoogle(this.origin,'drive',this.token??undefined);}
+ account(){return this.request<{email:string;driveConnected:boolean}>('admin/account');}
+ async disconnectDrive(){await this.request('admin/drive/disconnect','POST',{});}
+ uploadPhoto(image:string,name:string){return this.request<{image:string;driveFileId:string}>('admin/drive/upload','POST',{image,name});}
+ async deleteAccount(confirmation:string){await this.request('admin/account','DELETE',{confirmation});this.token=null;}
+
+ snapshot(){return this.request<Snapshot>('admin/snapshot');}kitchen(token:string){return this.request<KitchenSnapshot>('kitchen/snapshot','GET',undefined,token);}create(draft:Draft){return this.request<Order>('admin/orders','POST',draft);}update(id:string,c:Change){return this.request<Order>('admin/orders/'+id,'PATCH',c);}
+ async saveMenu(o:MenuOption){await this.request('admin/menu','POST',o);}async saveSettings(s:Settings){await this.request('admin/settings','POST',s);}history(from?:string,to?:string){const q=(from&&to)?`?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`:'';return this.request<Order[]>('admin/history'+q);}events(id:string){return this.request<AuditEvent[]>('admin/orders/'+id+'/events');}rotate(){return this.request<{path:string;token:string;qrDataUrl:string}>('admin/display','POST',{});}realtime(token?:string){return this.request<{tokenRequest:import('ably').TokenRequest;channel:string}>(token?'kitchen/token':'admin/token','GET',undefined,token);}async logout(){await this.request('auth/logout','POST',{});this.token=null;}subscribe(){return()=>{};}
+}

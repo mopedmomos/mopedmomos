@@ -1,0 +1,1 @@
+export async function shareCsv(name:string,contents:string){const blob=new Blob([contents],{type:'text/csv;charset=utf-8'});const href=URL.createObjectURL(blob);const link=document.createElement('a');link.href=href;link.download=name;link.click();URL.revokeObjectURL(href);}

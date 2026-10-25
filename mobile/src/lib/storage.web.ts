@@ -1,5 +1,21 @@
-// Preview/browser sessions stay in memory; never persist bearer credentials in localStorage.
-const values=new Map<string,string>();
-export const readSecret=async(key:string)=>values.get(key)??null;
-export const writeSecret=async(key:string,value:string)=>{values.set(key,value);};
-export const deleteSecret=async(key:string)=>{values.delete(key);};
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+export const readSecret = async (key: string) => {
+  try {
+    return await AsyncStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+export const writeSecret = async (key: string, value: string) => {
+  try {
+    await AsyncStorage.setItem(key, value);
+  } catch {}
+};
+
+export const deleteSecret = async (key: string) => {
+  try {
+    await AsyncStorage.removeItem(key);
+  } catch {}
+};

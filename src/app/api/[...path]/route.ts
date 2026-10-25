@@ -28,7 +28,7 @@ async function dispatch(req:Request,context:{params:Promise<{path:string[]}>}) {
   }
   if(path==='auth/google/exchange'&&method==='POST'){
    nativeOrigin(req);const input=z.object({code:z.string().regex(/^[A-Za-z0-9_-]{43}$/),verifier:z.string().min(43).max(128)}).parse(await body(req));const result=await exchangeHandoff(input.code,input.verifier);
-   if('kind' in result&&result.kind==='browser'){const response=json({email:result.email,expiresAt:result.expiresAt});response.cookies.set(SESSION_COOKIE,result.token!,{httpOnly:true,secure:true,sameSite:'strict',path:'/',maxAge:12*3600});return response;}return json(result);
+   if('kind' in result&&result.kind==='browser'){const response=json({email:result.email,expiresAt:result.expiresAt});response.cookies.set(SESSION_COOKIE,result.token!,{httpOnly:true,secure:true,sameSite:'strict',path:'/',maxAge:365*24*3600});return response;}return json(result);
   }
   initKeepAlive();
    if((path==='ping'||path==='health')&&method==='GET'){return json({ok:true,service:'moped-momos',uptime:Math.round(process.uptime()),time:new Date().toISOString()});}

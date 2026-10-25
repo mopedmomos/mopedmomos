@@ -73,7 +73,12 @@ export function Overview({snapshot:s,repo,onSelect,onHistory}:{snapshot:Snapshot
   const filteredOrders = useMemo(()=>{
     return baseOrders.filter(o=>{
       if(selectedDay && o.businessDate !== selectedDay) return false;
-      if(typeFilter !== 'all' && o.type !== typeFilter) return false;
+      if(typeFilter !== 'all') {
+        const match = typeFilter === 'dine-in'
+          ? (o.type === 'dine-in' || o.items.some(i => (i.serviceType ?? o.type) === 'dine-in'))
+          : (o.type === 'takeaway' || o.items.some(i => (i.serviceType ?? o.type) === 'takeaway'));
+        if(!match) return false;
+      }
       if(methodFilter !== 'all' && o.method !== methodFilter) return false;
       if(paymentFilter === 'paid') return o.collected >= o.total && o.status !== 'cancelled';
       if(paymentFilter === 'unpaid') return o.collected < o.total && o.status !== 'cancelled';
@@ -220,17 +225,74 @@ export function Overview({snapshot:s,repo,onSelect,onHistory}:{snapshot:Snapshot
         )}
       </View>
 
-      {/* Dining Preference Card */}
+      {/* Dine-in vs Parcel Payment & Revenue Distribution */}
       <View style={u.card}>
-        <Text style={u.eyebrow}>ORDER TYPE BREAKDOWN</Text>
-        <View style={u.between}>
-          <Text style={u.body}>Dine-in</Text>
-          <Text style={u.label}>{insights.dineInCount} ({stats.orders?Math.round((insights.dineInCount/stats.orders)*100):0}%)</Text>
+        <Text style={u.eyebrow}>DINE-IN VS PARCEL DISTRIBUTION</Text>
+
+        {/* Dine-in Box */}
+        <View style={{backgroundColor:'#192231',padding:14,borderRadius:12,borderLeftWidth:4,borderLeftColor:'#82ABFF',gap:8}}>
+          <View style={u.between}>
+            <View style={u.row}>
+              <Icon name="utensils" size={17} color="#82ABFF"/>
+              <Text style={[u.label,{color:'#82ABFF'}]}>Dine-in</Text>
+            </View>
+            <Text style={[u.label,{color:colors.ink}]}>{money(insights.dineInNetPaise)}</Text>
+          </View>
+          <View style={u.between}>
+            <Text style={u.tiny}>Collected (Paid)</Text>
+            <Text style={[u.tiny,{color:colors.green,fontWeight:'700'}]}>{money(insights.dineInCollectedPaise)}</Text>
+          </View>
+          {insights.dineInUnpaidPaise > 0 && (
+            <View style={u.between}>
+              <Text style={u.tiny}>Pending due</Text>
+              <Text style={[u.tiny,{color:colors.orange,fontWeight:'700'}]}>{money(insights.dineInUnpaidPaise)}</Text>
+            </View>
+          )}
+          <View style={u.between}>
+            <Text style={u.tiny}>Collections</Text>
+            <Text style={u.tiny}>Cash {money(insights.dineInCashPaise)} · UPI {money(insights.dineInUpiPaise)}</Text>
+          </View>
+          <View style={u.between}>
+            <Text style={u.tiny}>Volume</Text>
+            <Text style={u.tiny}>{insights.dineInCount} orders · {insights.dineInPlates} plates ({stats.plates?Math.round((insights.dineInPlates/stats.plates)*100):0}%)</Text>
+          </View>
         </View>
-        <View style={u.between}>
-          <Text style={u.body}>Parcel / Takeaway</Text>
-          <Text style={u.label}>{insights.takeawayCount} ({stats.orders?Math.round((insights.takeawayCount/stats.orders)*100):0}%)</Text>
+
+        {/* Parcel Box */}
+        <View style={{backgroundColor:'#2B1F1B',padding:14,borderRadius:12,borderLeftWidth:4,borderLeftColor:'#FF9B70',gap:8,marginTop:10}}>
+          <View style={u.between}>
+            <View style={u.row}>
+              <Icon name="package" size={17} color="#FF9B70"/>
+              <Text style={[u.label,{color:'#FF9B70'}]}>Parcel / Takeaway</Text>
+            </View>
+            <Text style={[u.label,{color:colors.ink}]}>{money(insights.takeawayNetPaise)}</Text>
+          </View>
+          <View style={u.between}>
+            <Text style={u.tiny}>Collected (Paid)</Text>
+            <Text style={[u.tiny,{color:colors.green,fontWeight:'700'}]}>{money(insights.takeawayCollectedPaise)}</Text>
+          </View>
+          {insights.takeawayUnpaidPaise > 0 && (
+            <View style={u.between}>
+              <Text style={u.tiny}>Pending due</Text>
+              <Text style={[u.tiny,{color:colors.orange,fontWeight:'700'}]}>{money(insights.takeawayUnpaidPaise)}</Text>
+            </View>
+          )}
+          <View style={u.between}>
+            <Text style={u.tiny}>Collections</Text>
+            <Text style={u.tiny}>Cash {money(insights.takeawayCashPaise)} · UPI {money(insights.takeawayUpiPaise)}</Text>
+          </View>
+          <View style={u.between}>
+            <Text style={u.tiny}>Volume</Text>
+            <Text style={u.tiny}>{insights.takeawayCount} orders · {insights.takeawayPlates} plates ({stats.plates?Math.round((insights.takeawayPlates/stats.plates)*100):0}%)</Text>
+          </View>
         </View>
+
+        {insights.mixedCount > 0 && (
+          <View style={[u.between,{marginTop:6}]}>
+            <Text style={u.tiny}>Mixed orders (Dine-in + Parcel)</Text>
+            <Text style={u.tiny}>{insights.mixedCount} tickets</Text>
+          </View>
+        )}
       </View>
 
       {/* Everyday Daily Breakdown */}

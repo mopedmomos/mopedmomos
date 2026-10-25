@@ -1,10 +1,98 @@
-import React from 'react';
-import {View,Text,Pressable,Image,Switch,StyleSheet} from 'react-native';
-import {money} from '../lib/domain';
+import React,{useState} from 'react';
+import {View,Text,Pressable,Switch,StyleSheet} from 'react-native';
+import {money,ticket,canTransition,type Order} from '../lib/domain';
 import type {PaymentAction,PaymentState} from '../lib/payment';
 import {upiPaymentUri,upiPayee} from '../lib/upi';
 import {AmountQR} from './AmountQR';
 import {Button,Icon,Sheet,u,colors} from './ui';
-export function PaymentPicker({state,dispatch,total,disabled=false}:{state:PaymentState;dispatch:(action:PaymentAction)=>void;total:number;disabled?:boolean}){return <View style={{gap:15}}><View style={u.between}><Text style={u.label}>Payment method</Text><Text style={u.tiny}>Cash or UPI</Text></View><View style={u.row}>{([{method:'cash',name:'Cash',icon:'rupee'},{method:'upi',name:'Online / UPI',icon:'qr-code'},{method:'other',name:'Other',icon:'credit-card'}] as const).map(m=><Pressable disabled={disabled} accessibilityRole="button" accessibilityLabel={`Pay by ${m.name}`} accessibilityState={{selected:state.method===m.method,disabled}} testID={'payment-'+m.method} key={m.method} onPress={()=>dispatch({type:'select',method:m.method})} style={[p.method,state.method===m.method&&p.selected]}><Icon name={m.icon} size={20} color={state.method===m.method?colors.yellow:colors.muted}/><Text style={[p.methodText,state.method===m.method&&{color:colors.ink}]}>{m.name}</Text>{state.method===m.method&&<View style={p.checked}><Icon name="check" size={10}/></View>}</Pressable>)}</View><View style={p.pending}><View style={{flex:1,gap:5}}><Text style={p.pendingTitle}>Payment pending</Text><Text style={u.tiny}>{state.pending?'Place the order now. Collect payment later.':'You have confirmed the payment was received.'}</Text></View><Switch disabled={disabled} accessibilityLabel="Payment pending" testID="payment-pending" value={state.pending} onValueChange={value=>dispatch({type:'pending',value})} trackColor={{false:colors.raised,true:colors.yellow}} thumbColor="white"/></View>{state.method==='upi'&&<Button title="Show payment QR" variant="secondary" icon="qr-code" disabled={disabled} onPress={()=>dispatch({type:'select',method:'upi'})}/>}{state.method==='upi'&&<PaymentQR state={state} dispatch={dispatch} total={total}/>}</View>;}
-export function PaymentQR({state,dispatch,total}:{state:PaymentState;dispatch:(action:PaymentAction)=>void;total:number}){return <Sheet title="Scan to pay with UPI" visible={state.method==='upi'&&state.qrVisible} onClose={()=>dispatch({type:'dismiss'})} footer={<View style={{gap:10}}><Button title="Payment received" icon="check" testID="confirm-upi-payment" onPress={()=>dispatch({type:'received'})}/><Button title="Keep payment pending" variant="secondary" icon="clock" testID="keep-payment-pending" onPress={()=>dispatch({type:'keep-pending'})}/></View>}><View style={{alignItems:'center',gap:15}}><View style={{alignItems:'center',gap:6}}><Text style={u.eyebrow}>AMOUNT TO COLLECT</Text><Text style={[u.total,{fontSize:36}]}>{money(total)}</Text></View>{total>0?<View style={{padding:8,backgroundColor:'white',borderRadius:16}}><AmountQR value={upiPaymentUri(total)}/></View>:<Text style={u.body}>Add a payable amount to generate a QR.</Text>}<Text style={[u.label,{textAlign:'center'}]}>{upiPayee.name}</Text><Text selectable style={[u.tiny,{textAlign:'center'}]}>{upiPayee.address}</Text><Text style={[u.body,{textAlign:'center'}]}>Scan in Google Pay or any UPI app. The amount is filled in for this order.</Text><Text style={[u.tiny,{textAlign:'center',maxWidth:300}]}>Verify the transfer in your payment app before confirming. Scanning this QR does not automatically mark the ticket paid.</Text></View></Sheet>;}
-const p=StyleSheet.create({method:{flex:1,minHeight:87,borderWidth:1,borderColor:colors.line,borderRadius:13,backgroundColor:colors.card,alignItems:'center',justifyContent:'center',gap:9,paddingHorizontal:4,position:'relative'},selected:{backgroundColor:'#302019',borderColor:colors.yellow},methodText:{fontSize:11,fontWeight:'600',color:'#A5ABB7'},checked:{position:'absolute',top:7,right:7,width:16,height:16,borderRadius:8,backgroundColor:colors.yellow,alignItems:'center',justifyContent:'center'},pending:{padding:15,borderRadius:13,borderWidth:1,borderColor:'#292D36',backgroundColor:'#191C23',flexDirection:'row',gap:12,alignItems:'center'},pendingTitle:{fontSize:13,fontWeight:'700',color:'#A5ABB7'}});
+
+export function PaymentPicker({state,dispatch,total,disabled=false}:{state:PaymentState;dispatch:(action:PaymentAction)=>void;total:number;disabled?:boolean}){
+  return <View style={{gap:15}}>
+    <View style={u.between}><Text style={u.label}>Payment method</Text><Text style={u.tiny}>Cash or UPI</Text></View>
+    <View style={u.row}>{([{method:'cash',name:'Cash',icon:'rupee'},{method:'upi',name:'Online / UPI',icon:'qr-code'},{method:'other',name:'Other',icon:'credit-card'}] as const).map(m=><Pressable disabled={disabled} accessibilityRole="button" accessibilityLabel={`Pay by ${m.name}`} accessibilityState={{selected:state.method===m.method,disabled}} testID={'payment-'+m.method} key={m.method} onPress={()=>dispatch({type:'select',method:m.method})} style={[p.method,state.method===m.method&&p.selected]}><Icon name={m.icon} size={20} color={state.method===m.method?colors.yellow:colors.muted}/><Text style={[p.methodText,state.method===m.method&&{color:colors.ink}]}>{m.name}</Text>{state.method===m.method&&<View style={p.checked}><Icon name="check" size={10}/></View>}</Pressable>)}</View>
+    <View style={p.pending}><View style={{flex:1,gap:5}}><Text style={p.pendingTitle}>Payment pending</Text><Text style={u.tiny}>{state.pending?'Place the order now. Collect payment later.':'You have confirmed the payment was received.'}</Text></View><Switch disabled={disabled} accessibilityLabel="Payment pending" testID="payment-pending" value={state.pending} onValueChange={value=>dispatch({type:'pending',value})} trackColor={{false:colors.raised,true:colors.yellow}} thumbColor="white"/></View>
+    {state.method==='upi'&&<Button title="Show payment QR" variant="secondary" icon="qr-code" disabled={disabled} onPress={()=>dispatch({type:'select',method:'upi'})}/>}
+    {state.method==='upi'&&<PaymentQR state={state} dispatch={dispatch} total={total}/>}
+  </View>;
+}
+
+export function PaymentQR({state,dispatch,total}:{state:PaymentState;dispatch:(action:PaymentAction)=>void;total:number}){
+  return <Sheet title="Scan to pay with UPI" visible={state.method==='upi'&&state.qrVisible} onClose={()=>dispatch({type:'dismiss'})} footer={<View style={{gap:10}}><Button title="Payment received" icon="check" testID="confirm-upi-payment" onPress={()=>dispatch({type:'received'})}/><Button title="Keep payment pending" variant="secondary" icon="clock" testID="keep-payment-pending" onPress={()=>dispatch({type:'keep-pending'})}/></View>}>
+    <View style={{alignItems:'center',gap:15}}>
+      <View style={{alignItems:'center',gap:6}}><Text style={u.eyebrow}>AMOUNT TO COLLECT</Text><Text style={[u.total,{fontSize:36}]}>{money(total)}</Text></View>
+      {total>0?<View style={{padding:8,backgroundColor:'white',borderRadius:16}}><AmountQR value={upiPaymentUri(total)}/></View>:<Text style={u.body}>Add a payable amount to generate a QR.</Text>}
+      <Text style={[u.label,{textAlign:'center'}]}>{upiPayee.name}</Text>
+      <Text selectable style={[u.tiny,{textAlign:'center'}]}>{upiPayee.address}</Text>
+      <Text style={[u.body,{textAlign:'center'}]}>Scan in Google Pay or any UPI app. The amount is filled in for this order.</Text>
+      <Text style={[u.tiny,{textAlign:'center',maxWidth:300}]}>Verify the transfer in your payment app before confirming. Scanning this QR does not automatically mark the ticket paid.</Text>
+    </View>
+  </Sheet>;
+}
+
+export function QuickPaySheet({order,visible,onClose,onPay,busy=false}:{order:Order|null;visible:boolean;onClose:()=>void;onPay:(method:'cash'|'upi',andServe?:boolean)=>Promise<void>;busy?:boolean}){
+  const [showQR,setShowQR]=useState(false);
+  if(!order)return null;
+  const due=Math.max(0,order.total-order.collected);
+
+  return <Sheet visible={visible} title={`1-Click Payment · Ticket ${ticket(order.sequence)}`} onClose={onClose} footer={<Button title="Close" variant="secondary" disabled={busy} onPress={onClose}/>}>
+    <View style={{alignItems:'center',gap:6,marginVertical:8}}>
+      <Text style={u.eyebrow}>OUTSTANDING BALANCE</Text>
+      <Text style={[u.total,{fontSize:40,color:colors.green}]}>{money(due)}</Text>
+      <Text style={u.tiny}>Total: {money(order.total)}{order.collected>0?` · Already paid: ${money(order.collected)}`:''}</Text>
+    </View>
+
+    <View style={{gap:12,marginTop:12}}>
+      <Button
+        title={`💵 Mark Paid with CASH (${money(due)})`}
+        variant="primary"
+        icon="check"
+        busy={busy}
+        style={{minHeight:52,backgroundColor:colors.green}}
+        onPress={()=>void onPay('cash')}
+      />
+
+      <Button
+        title={`📱 Mark Paid with UPI / Online (${money(due)})`}
+        variant="primary"
+        icon="qr-code"
+        busy={busy}
+        style={{minHeight:52,backgroundColor:'#2E66E5'}}
+        onPress={()=>void onPay('upi')}
+      />
+
+      {canTransition(order.status,'completed')&&<Button
+        title="⚡ Mark Paid (Cash) & SERVED in 1 Click"
+        variant="secondary"
+        icon="arrow-right"
+        disabled={busy}
+        style={{minHeight:48,borderColor:colors.orange}}
+        onPress={()=>void onPay('cash',true)}
+      />}
+
+      <Button
+        title={showQR?'Hide UPI QR Code':'Show Customer UPI QR Code'}
+        variant="ghost"
+        icon={showQR?'minus':'plus'}
+        onPress={()=>setShowQR(!showQR)}
+      />
+
+      {showQR&&<View style={{alignItems:'center',gap:10,padding:16,backgroundColor:colors.card,borderRadius:16,borderWidth:1,borderColor:colors.line}}>
+        <View style={{padding:8,backgroundColor:'white',borderRadius:16}}>
+          <AmountQR value={upiPaymentUri(due)}/>
+        </View>
+        <Text style={[u.label,{textAlign:'center'}]}>{upiPayee.name}</Text>
+        <Text selectable style={[u.tiny,{textAlign:'center'}]}>{upiPayee.address}</Text>
+        <Text style={[u.tiny,{textAlign:'center'}]}>Scan in Google Pay, PhonePe, or Paytm</Text>
+      </View>}
+    </View>
+  </Sheet>;
+}
+
+const p=StyleSheet.create({
+  method:{flex:1,minHeight:87,borderWidth:1,borderColor:colors.line,borderRadius:13,backgroundColor:colors.card,alignItems:'center',justifyContent:'center',gap:9,paddingHorizontal:4,position:'relative'},
+  selected:{backgroundColor:'#302019',borderColor:colors.yellow},
+  methodText:{fontSize:11,fontWeight:'600',color:'#A5ABB7'},
+  checked:{position:'absolute',top:7,right:7,width:16,height:16,borderRadius:8,backgroundColor:colors.yellow,alignItems:'center',justifyContent:'center'},
+  pending:{padding:15,borderRadius:13,borderWidth:1,borderColor:'#292D36',backgroundColor:'#191C23',flexDirection:'row',gap:12,alignItems:'center'},
+  pendingTitle:{fontSize:13,fontWeight:'700',color:'#A5ABB7'}
+});

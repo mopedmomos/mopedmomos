@@ -73,9 +73,22 @@ export interface ComprehensiveInsights {
   aovPaise: number;
   dineInCount: number;
   takeawayCount: number;
+  mixedCount: number;
+  dineInPlates: number;
+  takeawayPlates: number;
+  dineInNetPaise: number;
+  dineInCollectedPaise: number;
+  dineInUnpaidPaise: number;
+  takeawayNetPaise: number;
+  takeawayCollectedPaise: number;
+  takeawayUnpaidPaise: number;
   cashPaise: number;
   upiPaise: number;
   otherPaise: number;
+  dineInCashPaise: number;
+  dineInUpiPaise: number;
+  takeawayCashPaise: number;
+  takeawayUpiPaise: number;
   dailyBreakdown: DailyBreakdown[];
   topItems: ItemSalesInsight[];
 }
@@ -84,16 +97,86 @@ export function calculateInsights(orders: Order[]): ComprehensiveInsights {
   const stats = calculateStats(orders);
   const valid = orders.filter(o => o.status !== 'cancelled');
   const aovPaise = valid.length ? Math.round(stats.net / valid.length) : 0;
-  let dineInCount = 0, takeawayCount = 0;
+  let dineInCount = 0, takeawayCount = 0, mixedCount = 0;
+  let dineInPlates = 0, takeawayPlates = 0;
+  let dineInNetPaise = 0, dineInCollectedPaise = 0, dineInUnpaidPaise = 0;
+  let takeawayNetPaise = 0, takeawayCollectedPaise = 0, takeawayUnpaidPaise = 0;
   let cashPaise = 0, upiPaise = 0, otherPaise = 0;
+  let dineInCashPaise = 0, dineInUpiPaise = 0;
+  let takeawayCashPaise = 0, takeawayUpiPaise = 0;
 
-  for (const o of orders) {
-    if (o.type === 'dine-in') dineInCount++;
-    else takeawayCount++;
+  for (const o of valid) {
+    let orderDineInTotal = 0;
+    let orderTakeawayTotal = 0;
+    let orderDineInPlates = 0;
+    let orderTakeawayPlates = 0;
+
+    for (const item of o.items) {
+      const sType = item.serviceType ?? o.type;
+      if (sType === 'dine-in') {
+        orderDineInTotal += item.total;
+        orderDineInPlates += item.quantity;
+      } else {
+        orderTakeawayTotal += item.total;
+        orderTakeawayPlates += item.quantity;
+      }
+    }
+
+    const itemsSum = orderDineInTotal + orderTakeawayTotal;
+    let orderDineInNet = 0;
+    let orderTakeawayNet = 0;
+    let orderDineInCollected = 0;
+    let orderTakeawayCollected = 0;
+
+    if (itemsSum > 0) {
+      const dineRatio = orderDineInTotal / itemsSum;
+      orderDineInNet = Math.round(o.total * dineRatio);
+      orderTakeawayNet = o.total - orderDineInNet;
+
+      orderDineInCollected = Math.round(o.collected * dineRatio);
+      orderTakeawayCollected = o.collected - orderDineInCollected;
+    } else {
+      if (o.type === 'dine-in') {
+        orderDineInNet = o.total;
+        orderDineInCollected = o.collected;
+      } else {
+        orderTakeawayNet = o.total;
+        orderTakeawayCollected = o.collected;
+      }
+    }
+
+    dineInNetPaise += orderDineInNet;
+    takeawayNetPaise += orderTakeawayNet;
+    dineInCollectedPaise += orderDineInCollected;
+    takeawayCollectedPaise += orderTakeawayCollected;
+    dineInUnpaidPaise += Math.max(0, orderDineInNet - orderDineInCollected);
+    takeawayUnpaidPaise += Math.max(0, orderTakeawayNet - orderTakeawayCollected);
+
+    dineInPlates += orderDineInPlates;
+    takeawayPlates += orderTakeawayPlates;
+
+    if (orderDineInPlates > 0 && orderTakeawayPlates > 0) {
+      mixedCount++;
+      dineInCount++;
+      takeawayCount++;
+    } else if (orderDineInPlates > 0 || o.type === 'dine-in') {
+      dineInCount++;
+    } else {
+      takeawayCount++;
+    }
+
     if (o.collected > 0) {
-      if (o.method === 'cash') cashPaise += o.collected;
-      else if (o.method === 'upi') upiPaise += o.collected;
-      else otherPaise += o.collected;
+      if (o.method === 'cash') {
+        cashPaise += o.collected;
+        dineInCashPaise += orderDineInCollected;
+        takeawayCashPaise += orderTakeawayCollected;
+      } else if (o.method === 'upi') {
+        upiPaise += o.collected;
+        dineInUpiPaise += orderDineInCollected;
+        takeawayUpiPaise += orderTakeawayCollected;
+      } else {
+        otherPaise += o.collected;
+      }
     }
   }
 
@@ -166,9 +249,22 @@ export function calculateInsights(orders: Order[]): ComprehensiveInsights {
     aovPaise,
     dineInCount,
     takeawayCount,
+    mixedCount,
+    dineInPlates,
+    takeawayPlates,
+    dineInNetPaise,
+    dineInCollectedPaise,
+    dineInUnpaidPaise,
+    takeawayNetPaise,
+    takeawayCollectedPaise,
+    takeawayUnpaidPaise,
     cashPaise,
     upiPaise,
     otherPaise,
+    dineInCashPaise,
+    dineInUpiPaise,
+    takeawayCashPaise,
+    takeawayUpiPaise,
     dailyBreakdown,
     topItems
   };

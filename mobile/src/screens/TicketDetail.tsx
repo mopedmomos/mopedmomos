@@ -1,23 +1,134 @@
 import React,{useEffect,useReducer,useState} from 'react';
-import {View,Text,TextInput,StyleSheet} from 'react-native';
+import {View,Text,StyleSheet} from 'react-native';
 import {canTransition,money,ticket,serviceName,serviceLabel,type Order,type AuditEvent} from '../lib/domain';
 import {initialPayment,paymentReducer,type PaymentAction} from '../lib/payment';
 import type {Repository,Change} from '../lib/repository';
 import {PaymentPicker} from '../components/Payment';
 import {Sheet,Button,Badge,Field,ErrorBanner,u,colors} from '../components/ui';
+
 export function TicketDetail({order:o,repo,onClose,onUpdate,onEdit,onRepeat}:{order:Order;repo:Repository;onClose:()=>void;onUpdate:(o:Order)=>void;onEdit:(o:Order)=>void;onRepeat:(o:Order)=>void}){
- const [busy,setBusy]=useState(false),[error,setError]=useState(''),[events,setEvents]=useState<AuditEvent[]>([]),[collection,setCollection]=useState(String(o.collected/100)),[confirm,setConfirm]=useState<'cancel'|'refund'|null>(null);
- const [payment,dispatch]=useReducer(paymentReducer,{...initialPayment,method:o.method??'cash',pending:o.collected<o.total});
- useEffect(()=>{let active=true;void repo.events(o.id).then(e=>{if(active)setEvents(e);}).catch(()=>{});return()=>{active=false;};},[repo,o.id,o.version]);
- async function update(change:Omit<Change,'version'>){if(busy)return;setBusy(true);setError('');try{const order=await repo.update(o.id,{version:o.version,...change});setConfirm(null);onUpdate(order);}catch(e){setError(e instanceof Error?e.message:'Could not update ticket.');}finally{setBusy(false);}}
- function paymentAction(a:PaymentAction){if(busy)return;dispatch(a);if(a.type==='received'||(a.type==='pending'&&!a.value))setCollection(String(o.total/100));else if(a.type==='select'&&a.method!==payment.method)setCollection('0');else if((a.type==='keep-pending'||a.type==='pending')&&Number(collection)*100>=o.total)setCollection('0');}
- function saveCollection(){const collected=Math.round(Number(collection)*100);if(!Number.isFinite(collected)||collected<0||collected>o.total){setError('Enter a collected amount between zero and the ticket value.');return;}if(collected<o.collected){setConfirm('refund');return;}void update({payment:{collected,method:payment.method}});}
- return <Sheet visible title={`Ticket ${ticket(o.sequence)}`} onClose={()=>{if(!busy)onClose();}} full><View style={u.between}><Badge status={o.status}/><Text style={u.tiny}>{serviceLabel(o.items,o.type)}</Text></View><Text style={u.tiny}>{o.businessDate} · {new Date(o.createdAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · Version {o.version}</Text>
- {confirm?<View style={u.card}><Text style={u.label}>{confirm==='cancel'?'Cancel this ticket?':'Record a refund correction?'}</Text><Text style={u.body}>{confirm==='cancel'?'It will leave the kitchen queue. Any recorded collection remains until you record a refund.':`The recorded collection will decrease from ${money(o.collected)} to ${money(Math.round(Number(collection)*100))}. This records your manual correction; it does not transfer money.`}</Text><Button title="Confirm" variant="danger" busy={busy} onPress={()=>void update(confirm==='cancel'?{status:'cancelled'}:{payment:{collected:Math.round(Number(collection)*100),method:payment.method}})}/><Button title="Keep current record" variant="secondary" onPress={()=>setConfirm(null)}/></View>:<>
- <View style={{gap:16}}>{o.items.map(i=><View style={d.item} key={i.id}><Text style={d.qty}>{i.quantity}×</Text><View style={{flex:1,gap:6}}><Text style={u.label}>{i.name}</Text><Text style={u.tiny}>{i.variant} · {i.portion}{i.pieces?` · ${i.pieces} pcs`:''}</Text><Text style={d.service}>{serviceName(i.serviceType)}</Text>{i.note&&<Text style={d.note}>{i.note}</Text>}</View><Text style={u.label}>{money(i.total)}</Text></View>)}</View>{o.note&&<View style={d.noteCard}><Text style={u.eyebrow}>KITCHEN NOTE</Text><Text style={d.note}>{o.note}</Text></View>}
- <View style={u.between}><Text style={u.body}>Subtotal</Text><Text style={u.label}>{money(o.subtotal)}</Text></View>{o.adjustment!==0&&<View style={u.between}><Text style={u.body}>Adjustment</Text><Text style={u.label}>{money(o.adjustment)}</Text></View>}<View style={u.between}><Text style={u.label}>Ticket total</Text><Text style={u.total}>{money(o.total)}</Text></View><View style={{gap:9}}>{canTransition(o.status,'completed')&&<Button title="Mark served" variant="primary" disabled={busy} icon="check" onPress={()=>void update({status:'completed'})}/>}</View><View style={[u.row,{flexWrap:'wrap'}]}>{['pending','preparing'].includes(o.status)&&<Button title="Edit items" variant="secondary" disabled={busy} onPress={()=>onEdit(o)}/>}<Button title="Repeat order" variant="secondary" disabled={busy} onPress={()=>onRepeat(o)}/>{canTransition(o.status,'cancelled')&&<Button title="Cancel order" variant="danger" disabled={busy} onPress={()=>setConfirm('cancel')}/>}</View>
- <View style={u.divider}/><Text style={{fontSize:20,fontWeight:'700',color:colors.ink}}>Payment record</Text><Text style={u.body}>{money(o.collected)} collected · {o.status==='cancelled'?'Cancelled ticket':money(o.total-o.collected)+' outstanding'}</Text><PaymentPicker state={payment} dispatch={paymentAction} total={Math.max(0,o.total-o.collected)} disabled={busy}/><Field label="Collected amount (₹)" keyboardType="decimal-pad" value={collection} editable={!busy} onChangeText={value=>{setCollection(value);dispatch({type:'pending',value:Math.round(Number(value)*100)<o.total});}} help="Save only after checking the actual cash or transfer."/><Button title="Save payment record" icon="save" busy={busy} onPress={saveCollection}/>
- <View style={u.divider}/><Text style={u.label}>Ticket timeline</Text>{events.length?events.map(e=><View key={e.id} style={u.between}><Text style={u.body}>{e.kind.charAt(0).toUpperCase()+e.kind.slice(1)} · v{e.version}</Text><Text style={u.tiny}>{new Date(e.createdAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</Text></View>):<Text style={u.tiny}>Created {new Date(o.createdAt).toLocaleString('en-IN')}</Text>}
- </>}<ErrorBanner message={error}/></Sheet>;
+  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[events,setEvents]=useState<AuditEvent[]>([]),[collection,setCollection]=useState(String(o.collected/100)),[confirm,setConfirm]=useState<'cancel'|'refund'|null>(null);
+  const [payment,dispatch]=useReducer(paymentReducer,{...initialPayment,method:o.method??'cash',pending:o.collected<o.total});
+
+  useEffect(()=>{let active=true;void repo.events(o.id).then(e=>{if(active)setEvents(e);}).catch(()=>{});return()=>{active=false;};},[repo,o.id,o.version]);
+
+  async function update(change:Omit<Change,'version'>){
+    if(busy)return;
+    setBusy(true);
+    setError('');
+    try{
+      const order=await repo.update(o.id,{version:o.version,...change});
+      setConfirm(null);
+      onUpdate(order);
+    }catch(e){
+      setError(e instanceof Error?e.message:'Could not update ticket.');
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  function paymentAction(a:PaymentAction){
+    if(busy)return;
+    dispatch(a);
+    if(a.type==='received'||(a.type==='pending'&&!a.value))setCollection(String(o.total/100));
+    else if(a.type==='select'&&a.method!==payment.method)setCollection('0');
+    else if((a.type==='keep-pending'||a.type==='pending')&&Number(collection)*100>=o.total)setCollection('0');
+  }
+
+  function saveCollection(){
+    const collected=Math.round(Number(collection)*100);
+    if(!Number.isFinite(collected)||collected<0||collected>o.total){
+      setError('Enter a collected amount between zero and the ticket value.');
+      return;
+    }
+    if(collected<o.collected){
+      setConfirm('refund');
+      return;
+    }
+    void update({payment:{collected,method:payment.method}});
+  }
+
+  const isDue = o.collected < o.total;
+
+  return <Sheet visible title={`Ticket ${ticket(o.sequence)}`} onClose={()=>{if(!busy)onClose();}} full>
+    <View style={u.between}><Badge status={o.status}/><Text style={u.tiny}>{serviceLabel(o.items,o.type)}</Text></View>
+    <Text style={u.tiny}>{o.businessDate} · {new Date(o.createdAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · Version {o.version}</Text>
+
+    {confirm ? <View style={u.card}>
+      <Text style={u.label}>{confirm==='cancel'?'Cancel this ticket?':'Record a refund correction?'}</Text>
+      <Text style={u.body}>{confirm==='cancel'?'It will leave the kitchen queue. Any recorded collection remains until you record a refund.':`The recorded collection will decrease from ${money(o.collected)} to ${money(Math.round(Number(collection)*100))}. This records your manual correction; it does not transfer money.`}</Text>
+      <Button title="Confirm" variant="danger" busy={busy} onPress={()=>void update(confirm==='cancel'?{status:'cancelled'}:{payment:{collected:Math.round(Number(collection)*100),method:payment.method}})}/>
+      <Button title="Keep current record" variant="secondary" onPress={()=>setConfirm(null)}/>
+    </View> : <>
+      <View style={{gap:16}}>
+        {o.items.map(i=><View style={d.item} key={i.id}>
+          <Text style={d.qty}>{i.quantity}×</Text>
+          <View style={{flex:1,gap:6}}>
+            <Text style={u.label}>{i.name}</Text>
+            <Text style={u.tiny}>{i.variant} · {i.portion}{i.pieces?` · ${i.pieces} pcs`:''}</Text>
+            <Text style={d.service}>{serviceName(i.serviceType)}</Text>
+            {Boolean(i.note) && <Text style={d.note}>{i.note}</Text>}
+          </View>
+          <Text style={u.label}>{money(i.total)}</Text>
+        </View>)}
+      </View>
+      {Boolean(o.note) && <View style={d.noteCard}><Text style={u.eyebrow}>KITCHEN NOTE</Text><Text style={d.note}>{o.note}</Text></View>}
+
+      <View style={u.between}><Text style={u.body}>Subtotal</Text><Text style={u.label}>{money(o.subtotal)}</Text></View>
+      {o.adjustment!==0 && <View style={u.between}><Text style={u.body}>Adjustment</Text><Text style={u.label}>{money(o.adjustment)}</Text></View>}
+      <View style={u.between}><Text style={u.label}>Ticket total</Text><Text style={u.total}>{money(o.total)}</Text></View>
+
+      {/* 1-Click Payment Settlement */}
+      {isDue && (
+        <View style={{gap:10,backgroundColor:'#191C23',padding:14,borderRadius:14,borderWidth:1,borderColor:colors.orange}}>
+          <Text style={[u.eyebrow,{color:colors.orange}]}>⚡ 1-CLICK INSTANT PAYMENT</Text>
+          <View style={u.row}>
+            <Button
+              title={`💵 Paid Cash (${money(o.total-o.collected)})`}
+              icon="check"
+              disabled={busy}
+              style={{flex:1,backgroundColor:colors.green,minHeight:46}}
+              onPress={()=>void update({payment:{collected:o.total,method:'cash'}})}
+            />
+            <Button
+              title={`📱 Paid UPI (${money(o.total-o.collected)})`}
+              icon="qr-code"
+              disabled={busy}
+              style={{flex:1,backgroundColor:'#2E66E5',minHeight:46}}
+              onPress={()=>void update({payment:{collected:o.total,method:'upi'}})}
+            />
+          </View>
+        </View>
+      )}
+
+      <View style={{gap:9}}>
+        {canTransition(o.status,'completed') && <Button title="Mark served" variant="primary" disabled={busy} icon="check" onPress={()=>void update({status:'completed'})}/>}
+      </View>
+      <View style={[u.row,{flexWrap:'wrap'}]}>
+        {['pending','preparing'].includes(o.status) && <Button title="Edit items" variant="secondary" disabled={busy} onPress={()=>onEdit(o)}/>}
+        <Button title="Repeat order" variant="secondary" disabled={busy} onPress={()=>onRepeat(o)}/>
+        {canTransition(o.status,'cancelled') && <Button title="Cancel order" variant="danger" disabled={busy} onPress={()=>setConfirm('cancel')}/>}
+      </View>
+
+      <View style={u.divider}/>
+      <Text style={{fontSize:20,fontWeight:'700',color:colors.ink}}>Detailed payment record</Text>
+      <Text style={u.body}>{money(o.collected)} collected · {o.status==='cancelled'?'Cancelled ticket':money(o.total-o.collected)+' outstanding'}</Text>
+      <PaymentPicker state={payment} dispatch={paymentAction} total={Math.max(0,o.total-o.collected)} disabled={busy}/>
+      <Field label="Collected amount (₹)" keyboardType="decimal-pad" value={collection} editable={!busy} onChangeText={value=>{setCollection(value);dispatch({type:'pending',value:Math.round(Number(value)*100)<o.total});}} help="Save only after checking the actual cash or transfer."/>
+      <Button title="Save payment record" icon="save" busy={busy} onPress={saveCollection}/>
+
+      <View style={u.divider}/>
+      <Text style={u.label}>Ticket timeline</Text>
+      {events.length ? events.map(e=><View key={e.id} style={u.between}><Text style={u.body}>{e.kind.charAt(0).toUpperCase()+e.kind.slice(1)} · v{e.version}</Text><Text style={u.tiny}>{new Date(e.createdAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</Text></View>) : <Text style={u.tiny}>Created {new Date(o.createdAt).toLocaleString('en-IN')}</Text>}
+    </>}
+    {Boolean(error) && <ErrorBanner message={error}/>}
+  </Sheet>;
 }
-const d=StyleSheet.create({item:{flexDirection:'row',gap:11,alignItems:'flex-start',paddingBottom:16,borderBottomWidth:1,borderColor:colors.line},qty:{backgroundColor:'#191C23',fontSize:13,fontWeight:'700',color:'#A5ABB7',padding:8,borderRadius:8,minWidth:35,textAlign:'center'},service:{fontSize:10,fontWeight:'700',color:'#A5ABB7',alignSelf:'flex-start',paddingVertical:4,paddingHorizontal:6,borderRadius:5,backgroundColor:'#191C23'},note:{fontSize:13,lineHeight:20,color:'#EF683E'},noteCard:{padding:15,backgroundColor:'#191C23',borderRadius:12,gap:8}});
+
+const d=StyleSheet.create({
+  item:{flexDirection:'row',gap:11,alignItems:'flex-start',paddingBottom:16,borderBottomWidth:1,borderColor:colors.line},
+  qty:{backgroundColor:'#191C23',fontSize:13,fontWeight:'700',color:'#A5ABB7',padding:8,borderRadius:8,minWidth:35,textAlign:'center'},
+  service:{fontSize:10,fontWeight:'700',color:'#A5ABB7',alignSelf:'flex-start',paddingVertical:4,paddingHorizontal:6,borderRadius:5,backgroundColor:'#191C23'},
+  note:{fontSize:13,lineHeight:20,color:'#EF683E'},
+  noteCard:{padding:15,backgroundColor:'#191C23',borderRadius:12,gap:8}
+});

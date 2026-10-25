@@ -44,7 +44,11 @@
       ]
     ],
     "extra": {
-      "description": "Private stall counter and read-only kitchen"
+      "description": "Google owner Orders app",
+      "appRole": "orders",
+      "eas": {
+        "projectId": "fe98c58e-acf2-4a7e-87d6-480b19d19f11"
+      }
     }
   }
 }

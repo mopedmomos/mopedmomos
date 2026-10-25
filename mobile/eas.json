@@ -8,7 +8,9 @@
       "distribution": "internal",
       "env": {
         "APP_VARIANT": "orders",
-        "EXPO_PUBLIC_APP_VARIANT": "orders"
+        "EXPO_PUBLIC_APP_VARIANT": "orders",
+        "EXPO_PUBLIC_API_URL": "https://mopedmomos.onrender.com",
+        "EXPO_PUBLIC_WEB_APP_URL": "https://mopedmomos.onrender.com"
       },
       "android": {
         "buildType": "apk"
@@ -18,7 +20,9 @@
       "autoIncrement": true,
       "env": {
         "APP_VARIANT": "orders",
-        "EXPO_PUBLIC_APP_VARIANT": "orders"
+        "EXPO_PUBLIC_APP_VARIANT": "orders",
+        "EXPO_PUBLIC_API_URL": "https://mopedmomos.onrender.com",
+        "EXPO_PUBLIC_WEB_APP_URL": "https://mopedmomos.onrender.com"
       },
       "android": {
         "buildType": "app-bundle"
@@ -28,7 +32,9 @@
       "distribution": "internal",
       "env": {
         "APP_VARIANT": "kitchen",
-        "EXPO_PUBLIC_APP_VARIANT": "kitchen"
+        "EXPO_PUBLIC_APP_VARIANT": "kitchen",
+        "EXPO_PUBLIC_API_URL": "https://mopedmomos.onrender.com",
+        "EXPO_PUBLIC_WEB_APP_URL": "https://mopedmomos.onrender.com"
       },
       "android": {
         "buildType": "apk"
@@ -38,7 +44,9 @@
       "autoIncrement": true,
       "env": {
         "APP_VARIANT": "kitchen",
-        "EXPO_PUBLIC_APP_VARIANT": "kitchen"
+        "EXPO_PUBLIC_APP_VARIANT": "kitchen",
+        "EXPO_PUBLIC_API_URL": "https://mopedmomos.onrender.com",
+        "EXPO_PUBLIC_WEB_APP_URL": "https://mopedmomos.onrender.com"
       },
       "android": {
         "buildType": "app-bundle"

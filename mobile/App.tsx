@@ -19,7 +19,7 @@ import {Overview,MenuManager,SettingsScreen,AccountScreen} from './src/screens/M
 import {Brand,Button,Field,Sheet,Icon,IconButton,ErrorBanner,Confirm,u,colors,FrameWidthContext,type IconName} from './src/components/ui';
 type Connection={origin:string;token:string|null};
 const sessionKey='moped-native-session-google-v1';
-const defaultOrigin=process.env.EXPO_PUBLIC_API_URL??'';
+const defaultOrigin=process.env.EXPO_PUBLIC_API_URL||'https://mopedmomos.onrender.com';
 class Boundary extends React.Component<{children:ReactNode},{error:boolean}>{state={error:false};static getDerivedStateFromError(){return {error:true};}render(){return this.state.error?<SafeAreaView style={[u.screen,{padding:30,justifyContent:'center',gap:20}]}><Brand/><Text style={u.title}>Let’s reopen the counter.</Text><Text style={u.body}>The screen encountered a problem. Your unsent draft stays on this device.</Text><Button title="Try again" onPress={()=>this.setState({error:false})}/></SafeAreaView>:this.props.children;}}
 export default function App(){return <SafeAreaProvider><StatusBar style="light"/><Boundary><Application/></Boundary></SafeAreaProvider>;}
 function Application(){

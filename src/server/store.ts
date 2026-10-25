@@ -55,5 +55,15 @@ export async function saveSettings(raw:unknown) {const value=settingsSchema.pars
 export async function rotateDisplay() {const token=randomToken(),id=randomUUID();await write(async tx=>{await query(tx,'UPDATE display_links SET revoked_at=? WHERE revoked_at IS NULL',[Date.now()]);await query(tx,'INSERT INTO display_links(id,token_hash,channel,created_at) VALUES (?,?,?,?)',[id,hashToken(token),`kitchen-${id}`,Date.now()]);});return {token,path:`/k/${token}`};}
 export async function orderEvents(id:string) {const r=await query(db(),'SELECT * FROM order_events WHERE order_id=? ORDER BY created_at,version',[id]);return r.rows.map(r=>({id:String(r.id),orderId:String(r.order_id),kind:String(r.kind),version:Number(r.version),createdAt:Number(r.created_at),detail:String(r.detail)}));}
 export async function history(from:string,to:string) {return write(tx=>readOrders(tx,'business_date>=? AND business_date<=?',[from,to]));}
+export async function clearOrders() {
+  await write(async tx => {
+    await query(tx, 'DELETE FROM outbox');
+    await query(tx, 'DELETE FROM order_events');
+    await query(tx, 'DELETE FROM order_items');
+    await query(tx, 'DELETE FROM orders');
+    await query(tx, 'DELETE FROM daily_sequences');
+  });
+  return { cleared: true };
+}
 export async function healthy() {await query(db(),'SELECT 1');return {database:true,realtime:!!process.env.ABLY_API_KEY};}
 export {isActive};

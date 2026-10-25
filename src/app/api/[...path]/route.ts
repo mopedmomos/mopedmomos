@@ -49,6 +49,7 @@ async function dispatch(req:Request,context:{params:Promise<{path:string[]}>}) {
   if(path==='admin/snapshot'&&method==='GET') {after(()=>flushOutbox().then(()=>{}).catch(()=>{}));return json(await store.snapshot());}
   if(path==='admin/token'&&method==='GET')return json({tokenRequest:await tokenRequest(),channel:getAdminChannel()});
   if(path==='admin/health'&&method==='GET')return json(await store.healthy());
+   if(path==='admin/reset-data'&&method==='POST')return json(await store.clearOrders());
   if(path==='admin/orders'&&method==='POST'){const o=await store.createOrder(await body(req));after(()=>flushOutbox().then(()=>{}).catch(()=>{}));return json(o,201);}
   const match=path.match(/^admin\/orders\/([a-f0-9-]{36})(\/events)?$/);
   if(match&&method==='GET'&&match[2])return json(await store.orderEvents(match[1]));

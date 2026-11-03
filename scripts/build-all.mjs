@@ -1,15 +1,27 @@
 import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 
-console.log('--- 1. Exporting Orders Expo Web App ---');
-execSync('npm --prefix mobile run export:orders:web', { stdio: 'inherit' });
+const isRender = Boolean(process.env.RENDER);
+const skipExport = isRender || process.env.SKIP_EXPO_EXPORT === 'true' || process.argv.includes('--skip-expo');
 
-console.log('--- 2. Exporting Kitchen Expo Web App ---');
-execSync('npm --prefix mobile run export:kitchen:web', { stdio: 'inherit' });
+if (!skipExport && existsSync('public/index.html')) {
+  console.log('--- Pre-built Expo web apps found in public/ ---');
+}
 
-console.log('--- 3. Assembling Expo Apps into public/ ---');
-execSync('node scripts/assemble-native-preview.mjs public', { stdio: 'inherit' });
+if (!skipExport && (!existsSync('public/index.html') || process.env.FORCE_EXPO_EXPORT === 'true')) {
+  console.log('--- 1. Exporting Orders Expo Web App ---');
+  execSync('npm --prefix mobile run export:orders:web', { stdio: 'inherit' });
 
-console.log('--- 4. Building Next.js Server ---');
+  console.log('--- 2. Exporting Kitchen Expo Web App ---');
+  execSync('npm --prefix mobile run export:kitchen:web', { stdio: 'inherit' });
+
+  console.log('--- 3. Assembling Expo Apps into public/ ---');
+  execSync('node scripts/assemble-native-preview.mjs public', { stdio: 'inherit' });
+} else {
+  console.log('--- Serving pre-built Expo web apps from public/ ---');
+}
+
+console.log('--- Building Next.js Server ---');
 execSync('npx next build --webpack', { stdio: 'inherit' });
 
-console.log('--- Build All Complete! ---');
+console.log('--- Build Complete! ---');
